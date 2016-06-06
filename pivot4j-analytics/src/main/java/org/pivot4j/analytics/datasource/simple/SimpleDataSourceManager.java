@@ -1,5 +1,7 @@
 package org.pivot4j.analytics.datasource.simple;
 
+import java.net.Authenticator;
+import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.LinkedList;
 import java.util.List;
@@ -19,7 +21,9 @@ import org.pivot4j.PivotException;
 import org.pivot4j.analytics.datasource.AbstractDataSourceManager;
 import org.pivot4j.analytics.datasource.CatalogInfo;
 import org.pivot4j.analytics.datasource.CubeInfo;
+import org.pivot4j.analytics.datasource.CustomHTTPAuthenticator;
 import org.pivot4j.datasource.SimpleOlapDataSource;
+import org.pivot4j.datasource.SingleConnectionOlapDataSource;
 
 @ManagedBean(name = "dataSourceManager")
 @ApplicationScoped
@@ -72,12 +76,22 @@ public class SimpleDataSourceManager extends
 			throw new FacesException(msg, e);
 		}
 
-		SimpleOlapDataSource dataSource = new SimpleOlapDataSource();
+		OlapConnection connection = null;
+		SingleConnectionOlapDataSource dataSource = null;
 
-		dataSource.setConnectionString(definition.getUrl());
-		dataSource.setUserName(definition.getUserName());
-		dataSource.setPassword(definition.getPassword());
-		dataSource.setConnectionProperties(definition.getProperties());
+		Authenticator.setDefault(new CustomHTTPAuthenticator( definition.getUserName(), definition.getPassword()));
+		try {
+			connection = (OlapConnection) DriverManager.getConnection(definition.getUrl());
+			dataSource = new SingleConnectionOlapDataSource(connection);
+		} catch(SQLException e) {
+			String msg = "Failed to load JDBC driver : " + driverName;
+			throw new FacesException(msg, e);
+		}
+		// SimpleOlapDataSource dataSource = new SimpleOlapDataSource();
+		// dataSource.setConnectionString(definition.getUrl());
+		// dataSource.setUserName(definition.getUserName());
+		// dataSource.setPassword(definition.getPassword());
+		// dataSource.setConnectionProperties(definition.getProperties());
 
 		return dataSource;
 	}
